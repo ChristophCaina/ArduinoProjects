@@ -10,18 +10,19 @@
 #include <PCF8574.h>                  // Digital In-/Output extension
 #include <IRremote.hpp>               // IR remote
 
-bool debug = true;                   // for DebugOption we want to shorten a specific PIN. default value is true
+bool debug;                           // for DebugOption we want to shorten a specific PIN. default value is true
 const byte debugPin = D2;            // If this pin is set to high, the software will run in debug mode
 
 void setup() {
   pinMode(debugPin, INPUT);
   
-  if(!digitalRead(debugPin)) {
-    debug = false;
-    wifiManager.setDebugOutput(false);
+  if(digitalRead(debugPin)) {
+    debug = true;
+    Serial.begin(115200);
   }
   else {
-    Serial.begin(115200);
+    debug = false;
+    wifiManager.setDebugOutput(false);
   }
 }
 
