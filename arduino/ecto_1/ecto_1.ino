@@ -9,7 +9,7 @@
 #include <PCF8574.h>                  // Digital In-/Output extension
 #include <IRremote.hpp>               // IR remote
 
-bool debug;                   // for DebugOption we want to shorten a specific PIN. default value is true
+bool debug;                           // for DebugOption we want to shorten a specific PIN. default value is true
 const byte debugPin = 2;
 
 void setup() {
