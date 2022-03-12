@@ -11,7 +11,7 @@
 #include <IRremote.hpp>               // IR remote
 
 bool debug;                           // for DebugOption we want to shorten a specific PIN. default value is true
-const byte debugPin = D2;            // If this pin is set to high, the software will run in debug mode
+const byte debugPin = D2;
 
 void setup() {
   pinMode(debugPin, INPUT);
