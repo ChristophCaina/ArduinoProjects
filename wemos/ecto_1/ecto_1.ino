@@ -41,14 +41,14 @@ void setup() {
   if(wm.autoConnect()) {
     if(debug) {
       Serial.print("successfully connected to: ");
-      Serial.println("SSID: " + (String)wifiManager.getWiFiSSID()));
+      Serial.println("SSID: " + (String)wifiManager.getWiFiSSID());
     }
   }
   else {
     if(wm.startConfigPortal(wifiAutoSSID)) {
       if(debug) {
         Serial.print("configuration portal started with");
-        Serial.println("SSID: " + (String)wifiManager.getWiFiSSID()));
+        Serial.println("SSID: " + (String)wifiManager.getWiFiSSID());
       }
     }
     else {
