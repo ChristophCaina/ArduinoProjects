@@ -1,6 +1,6 @@
 /*
  * 
- *   Controller for the Eaglemoss Ecto-1 Model Kit
+ *   Controller for the Eaglemoss Enterprise D Model Kit
  *   by Christoph Caina
  *   
  */
@@ -13,7 +13,7 @@
 const byte debugPin = D2;
 bool debug;                           // for DebugOption we want to shorten a specific PIN. default value is true
 unsigned long cpTimeout = 120;        // seconds until the CP will time-out
-char* wifiAutoSSID = "GhostBusters";  // our 'default' SSID when the CP starts
+char* wifiAutoSSID = "GhostBusters";    // our 'default' SSID when the CP starts
 
 WiFiManager wifiManager;
 
@@ -38,26 +38,18 @@ void setup() {
   wifiManager.setConfigPortalBlocking(false);
   wifiManager.setConfigPortalTimeout(cpTimeout);
 
-  if(wm.autoConnect()) {
+  if(wifiManager.autoConnect(wifiAutoSSID)) {
     if(debug) {
       Serial.print("successfully connected to: ");
       Serial.println("SSID: " + (String)wifiManager.getWiFiSSID());
     }
   }
   else {
-    if(wm.startConfigPortal(wifiAutoSSID)) {
-      if(debug) {
-        Serial.print("configuration portal started with");
-        Serial.println("SSID: " + (String)wifiManager.getWiFiSSID());
-      }
+    if(debug) {
+      Serial.print("failed to launch configuration portal");
+      Serial.println("restarting device!");
     }
-    else {
-      if(debug) {
-        Serial.print("failed to launch configuration portal");
-        Serial.println("restarting device!");
-      }
-      ESP.restart();
-    }
+    ESP.restart();
   }
 }
 
