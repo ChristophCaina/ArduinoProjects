@@ -6,12 +6,12 @@ all arduino and wemos related projects
 based on the Amtel AtMega 328P Chip
 
 ### Ecto-1
-This sketch is used for the Eaglemoss ECTO-1 Part Model Kit
+This sketch is used for the Eaglemoss ECTO-1 Part Model Kit.
 
 ### Enterprise D
 This sketch is used for the Eaglemoss U.S.S. Enterprise NCC 1701 D Part Model Kit
 
-## WeMos
+## WeMos D1 R2
 based on the ESP 8266 Chip
 
 ### Ecto-1
