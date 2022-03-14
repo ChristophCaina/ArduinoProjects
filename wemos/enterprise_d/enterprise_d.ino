@@ -10,12 +10,14 @@
 #include <PCF8574.h>                  // Digital In-/Output extension
 #include <IRremote.hpp>               // IR remote
 
-bool debug;                           // for DebugOption we want to shorten a specific PIN. default value is true
 const byte debugPin = D2;
+bool debug;                           // for DebugOption we want to shorten a specific PIN. default value is true
+unsigned long cpTimeout = 120;        // seconds until the CP will time-out
+char* wifiAutoSSID = "NCC1701D"       // our 'default' SSID when the CP starts
 
 void setup() {
   pinMode(debugPin, INPUT);
-  
+
   if(digitalRead(debugPin)) {
     debug = true;
     Serial.begin(115200);
@@ -24,8 +26,39 @@ void setup() {
     debug = false;
     wifiManager.setDebugOutput(false);
   }
+  
+  WiFi.mode(WIFI_STA);                // explicitly set mode, esp defaults to STA+AP 
+  
+  if(debug) {
+    wm.resetSettings();               // for debug and testing, we will reset the WiFiManager if debug is set to true
+  }
+  
+  wm.setConfigPortalBlocking(false);
+  wm.setConfigPortalTimeout(cpTimeout);
+
+  if(wm.autoConnect()) {
+    if(debug) {
+      Serial.print("successfully connected to: ");
+      Serial.println("SSID: " + (String)wm.getWiFiSSID()));
+    }
+  }
+  else {
+    if(wm.startConfigPortal(wifiAutoSSID)) {
+      if(debug) {
+        Serial.print("configuration portal started with");
+        Serial.println("SSID: " + (String)wm.getWiFiSSID()));
+      }
+    }
+    else {
+      if(debug) {
+        Serial.print("failed to launch configuration portal");
+        Serial.println("restarting device!");
+      }
+      ESP.restart();
+    }
+  }
 }
 
 void loop() {
-    // put your main code here, to run repeatedly:
+    wm.process();
 }
