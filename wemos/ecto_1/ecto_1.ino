@@ -35,15 +35,25 @@ void setup() {
   wm.setConfigPortalBlocking(false);
   wm.setConfigPortalTimeout(cpTimeout);
 
-  if(wm.autoConnect(wifiAutoSSID)) {
+  if(wm.autoConnect()) {
     if(debug) {
       Serial.print("successfully connected to: ");
-      Serial.println(WiFi.SSID());
+      Serial.println("SSID: " + (String)wm.getWiFiSSID()));
     }
   }
   else {
-    if(debug) {
-      Serial.print("configuration portal started");
+    if(wm.startConfigPortal(wifiAutoSSID)) {
+      if(debug) {
+        Serial.print("configuration portal started with");
+        Serial.println("SSID: " + (String)wm.getWiFiSSID()));
+      }
+    }
+    else {
+      if(debug) {
+        Serial.print("failed to launch configuration portal");
+        Serial.println("restarting device!");
+      }
+      ESP.restart();
     }
   }
 }
