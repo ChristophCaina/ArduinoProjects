@@ -41,7 +41,7 @@ void setup() {
   if(wifiManager.autoConnect(wifiAutoSSID)) {
     if(debug) {
       Serial.print("successfully connected to: ");
-      Serial.println("SSID: " + (String)wifiManager.getWiFiSSID()));
+      Serial.println("SSID: " + (String)wifiManager.getWiFiSSID());
     }
   }
   else {
