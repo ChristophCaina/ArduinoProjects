@@ -83,5 +83,58 @@ void setup() {
 }
 
 void loop() {
-    // put your main code here, to run repeatedly:
+    TorpedoLauncher(1);
+}
+
+//--------------------------------------------------------------------------
+
+void TorpedoLauncher(byte caller) {
+  static byte blinkFrontAmount = 0;
+  if(debug) {
+    Serial.print("Amount Front Torpedo-Launches: ");
+    Serial.println(blinkFrontAmount);
+  }
+
+  switch(caller) {
+    case 1:  
+      if(debug) {
+        Serial.print("Function-Caller: ");
+        Serial.print(caller);
+        Serial.println(" (loop)");
+      }
+      
+      // change this code according to new PCF Library... !
+      /*
+      if (PCF_IN.read(frontTorpedoLaunchBtn))
+      {
+        if(debug) {
+          Serial.println("front torpedolauncher activated!");
+        }
+        blinkFrontAmount = amountFrontTorpedoLaunches;
+      }
+      */
+      
+      flashingGroup[FRONTTORPEDO].run(blinkFrontAmount);
+      break;
+      
+      case 2:
+        if(debug) {
+          Serial.print("Function-Caller: ");
+          Serial.print(caller);
+          Serial.println(" (WebUi)");
+        }
+      
+        // Add Code for WebInterface
+        // Example:
+        /*
+        if (header.indexOf("GET /5/on") >= 0) {
+          Serial.println("GPIO 5 on");
+          output5State = "on";
+          blinkFrontAmount = amountFrontTorpedoLaunches;
+          //digitalWrite(output5, HIGH);
+        } 
+        */
+        blinkFrontAmount = amountFrontTorpedoLaunches;
+        break;
+  }
 }
