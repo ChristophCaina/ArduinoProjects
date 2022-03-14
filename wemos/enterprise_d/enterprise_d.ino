@@ -29,7 +29,7 @@ void setup() {
     wifiManager.setDebugOutput(false);
   }
   
-  WiFi.mode(WIFI_STA);                // explicitly set mode, esp defaults to STA+AP 
+  WiFi.mode(WIFI_STA);                          // explicitly set mode, esp defaults to STA+AP 
   
   if(debug) {
     wifiManager.resetSettings();               // for debug and testing, we will reset the WiFiManager if debug is set to true
@@ -44,6 +44,7 @@ void setup() {
       Serial.println("SSID: " + (String)wifiManager.getWiFiSSID());
     }
   }
+  /*
   else {
     if(debug) {
       Serial.print("failed to launch configuration portal");
@@ -51,6 +52,7 @@ void setup() {
     }
     ESP.restart();
   }
+  */
 }
 
 void loop() {
