@@ -44,15 +44,6 @@ void setup() {
       Serial.println("SSID: " + (String)wifiManager.getWiFiSSID());
     }
   }
-  /*
-  else {
-    if(debug) {
-      Serial.print("failed to launch configuration portal");
-      Serial.println("restarting device!");
-    }
-    ESP.restart();
-  }
-  */
 }
 
 void loop() {
