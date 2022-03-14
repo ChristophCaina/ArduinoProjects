@@ -13,6 +13,9 @@
 const byte debugPin = D2;
 bool debug;                           // for DebugOption we want to shorten a specific PIN. default value is true
 unsigned long cpTimeout = 120;        // seconds until the CP will time-out
+char* wifiAutoSSID = "GhostBusters";  // our 'default' SSID when the CP starts
+
+WiFiManager wifiManager;
 
 void setup() {
   pinMode(debugPin, INPUT);
@@ -29,23 +32,23 @@ void setup() {
   WiFi.mode(WIFI_STA);                // explicitly set mode, esp defaults to STA+AP 
   
   if(debug) {
-    wm.resetSettings();               // for debug and testing, we will reset the WiFiManager if debug is set to true
+    wifiManager.resetSettings();               // for debug and testing, we will reset the WiFiManager if debug is set to true
   }
   
-  wm.setConfigPortalBlocking(false);
-  wm.setConfigPortalTimeout(cpTimeout);
+  wifiManager.setConfigPortalBlocking(false);
+  wifiManager.setConfigPortalTimeout(cpTimeout);
 
   if(wm.autoConnect()) {
     if(debug) {
       Serial.print("successfully connected to: ");
-      Serial.println("SSID: " + (String)wm.getWiFiSSID()));
+      Serial.println("SSID: " + (String)wifiManager.getWiFiSSID()));
     }
   }
   else {
     if(wm.startConfigPortal(wifiAutoSSID)) {
       if(debug) {
         Serial.print("configuration portal started with");
-        Serial.println("SSID: " + (String)wm.getWiFiSSID()));
+        Serial.println("SSID: " + (String)wifiManager.getWiFiSSID()));
       }
     }
     else {
@@ -59,5 +62,5 @@ void setup() {
 }
 
 void loop() {
-    wm.process();
+    wifiManager.process();
 }
