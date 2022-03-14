@@ -10,8 +10,9 @@
 #include <PCF8574.h>                  // Digital In-/Output extension
 #include <IRremote.hpp>               // IR remote
 
-bool debug;                           // for DebugOption we want to shorten a specific PIN. default value is true
 const byte debugPin = D2;
+bool debug;                           // for DebugOption we want to shorten a specific PIN. default value is true
+unsigned long cpTimeout = 120;        // seconds until the CP will time-out
 
 void setup() {
   pinMode(debugPin, INPUT);
@@ -24,8 +25,29 @@ void setup() {
     debug = false;
     wifiManager.setDebugOutput(false);
   }
+  
+  WiFi.mode(WIFI_STA);                // explicitly set mode, esp defaults to STA+AP 
+  
+  if(debug) {
+    wm.resetSettings();               // for debug and testing, we will reset the WiFiManager if debug is set to true
+  }
+  
+  wm.setConfigPortalBlocking(false);
+  wm.setConfigPortalTimeout(cpTimeout);
+
+  if(wm.autoConnect(wifiAutoSSID)) {
+    if(debug) {
+      Serial.print("successfully connected to: ");
+      Serial.println(WiFi.SSID());
+    }
+  }
+  else {
+    if(debug) {
+      Serial.print("configuration portal started");
+    }
+  }
 }
 
 void loop() {
-    // put your main code here, to run repeatedly:
+    wm.process();
 }
