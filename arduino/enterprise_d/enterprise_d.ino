@@ -5,12 +5,37 @@
  *   
  */
 
-#include <PCF8591.h>                  // Analog In-/Output extension
-#include <PCF8574.h>                  // Digital In-/Output extension
-#include <IRremote.hpp>               // IR remote
+#include <PCF8591.h>                          // Analog In-/Output extension
+#include <PCF8574.h>                          // Digital In-/Output extension
+#include <IRremote.hpp>                       // IR remote
 
-bool debug;                           // for DebugOption we want to shorten a specific PIN. default value is true
-const byte debugPin = 2;
+PCF8574 PCF_OUT(0x20);                        // OUTPUTS
+PCF8574 PCF_IN(0x25);                         // INPUTS
+
+bool debug;                                   // for DebugOption we want to shorten a specific PIN. default value is true
+const byte debugPin                = 2;
+
+bool useRearTorpedoLauncher        = true;    // will the rearTorpedoLauncher will be used?
+
+const byte frontTorpedoDt          = 4;       // change to PCF8574 Pin
+const byte frontTorpedoSw          = 2;       // change to PCF8574 Pin
+const byte frontTorpedoClk         = 7;       // change to PCF8574 Pin
+const byte rearTorpedoDt           = ;        // change to PCF8574 Pin
+const byte rearTorpedoSw           = ;        // change to PCF8574 Pin
+const byte rearTorpedoClk          = ;        // change to PCF8574 Pin
+
+int frontTorpedoAmount             = 0;
+int rearTorpedoAmount              = 0;
+unsigned long frontTorpedoLastBtn  = 0;
+unsigned long rearTorpedoLastBtn   = 0;
+int frontTorpedoLastClkState;
+int rearTorpedoLastClkState;
+int frontTorpedoCurrentClkState;
+int rearTorpedoCurrentClkState;
+
+int encMaxCount                    = 9;
+int encMinCount                    = 0;
+
 
 //--------------------------------------------------------------------------
 
@@ -71,6 +96,19 @@ Flasher flashingGroup[] =
 
 void setup() {
   pinMode(debugPin, INPUT);
+  
+  pinMode(frontTorpedoDt, INPUT);                      // Define Pin Mode for the DT connector (Front Torpedo)
+  pinMode(frontTorpedoSw, INPUT_PULLUP);               // Define Pin Mode for the SW connector (Front Torpedo)
+  pinMode(frontTorpedoClk, INPUT);                     // Define Pin Mode for the CLK cocnnector (Front Torpedo)
+  
+  pinMode(rearTorpedoDt, INPUT);                       // Define Pin Mode for the DT connector (Rear Torpedo)
+  pinMode(rearTorpedoSw, INPUT_PULLUP);                // Define Pin Mode for the SW connector (Rear Torpedo)
+  pinMode(rearTorpedoClk, INPUT);                      // Define Pin Mode for the CLK cocnnector (Rear Torpedo)
+  
+  frontTorpedoLastClkState = digitalRead(frontTorpedoClk);
+  frontTorpedoCurrentClkState = digitalRead(frontTorpedoClk);
+  rearTorpedoLastClkState = digitalRead(rearTorpedoClk);
+  rearTorpedoCurrentClkState = digitalRead(rearTorpedoClk);
 
   if(digitalRead(debugPin)) {
     debug = true;
