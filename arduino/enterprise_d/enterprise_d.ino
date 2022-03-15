@@ -5,7 +5,7 @@
  *   
  */
 
-//#include <PCF8591.h>                        // Analog In-/Output extension
+#include <PCF8591.h>                          // Analog In-/Output extension
 #include <PCF8574.h>                          // Digital In-/Output extension
 #include <IRremote.hpp>                       // IR remote
 
@@ -22,20 +22,17 @@ const byte rearTorpedoDt           = 3;       // PCF_IN P04
 const byte rearTorpedoSw           = 4;       // PCF_IN P05
 const byte rearTorpedoClk          = 5;       // PCF_IN P06
 
-int frontTorpedoAmount             = 0;
-int rearTorpedoAmount              = 0;
-unsigned long frontTorpedoLastBtn  = 0;
-unsigned long rearTorpedoLastBtn   = 0;
 int frontTorpedoLastClkState;
 int rearTorpedoLastClkState;
-int frontTorpedoCurrentClkState;
-int rearTorpedoCurrentClkState;
+
+int frontTorpedoAmount             = 0;
+int rearTorpedoAmount              = 0;
+
+unsigned long frontTorpedoLastBtn  = 0;
+unsigned long rearTorpedoLastBtn   = 0;
 
 const unsigned long torpedoOnTime  = 120;
 const unsigned long torpedoOffTime = 450;
-
-int encMaxCount                    = 9;
-int encMinCount                    = 0;
 
 const byte frontTorpedoLed         = 0;       // PCF_OUT P01
 const byte rearTorpedoLed          = 1;       // PCF_OUT P02
@@ -68,7 +65,6 @@ class Flasher {
           timeMarker = now;
         }
         break;
-        
       case _step::OnPhase:
         if (now - timeMarker >= onPhase) {
           PCF_OUT.digitalWrite(ledPin, LOW);           
@@ -76,7 +72,6 @@ class Flasher {
           timeMarker = now;
         }
         break;
-        
       case _step::OffPhase:
         if (now - timeMarker >= offPhase) {
           if (blinkAmount > 0) {
@@ -108,14 +103,11 @@ void setup() {
   pinMode(frontTorpedoSw, INPUT_PULLUP);               // Define Pin Mode for the SW connector (Front Torpedo)
   pinMode(frontTorpedoClk, INPUT);                     // Define Pin Mode for the CLK cocnnector (Front Torpedo)
   frontTorpedoLastClkState = digitalRead(frontTorpedoClk);
-  frontTorpedoCurrentClkState = digitalRead(frontTorpedoClk);
 
   pinMode(rearTorpedoDt, INPUT);                       // Define Pin Mode for the DT connector (Rear Torpedo)
   pinMode(rearTorpedoSw, INPUT_PULLUP);                // Define Pin Mode for the SW connector (Rear Torpedo)
   pinMode(rearTorpedoClk, INPUT);                      // Define Pin Mode for the CLK cocnnector (Rear Torpedo)
   rearTorpedoLastClkState = digitalRead(rearTorpedoClk);
-  rearTorpedoCurrentClkState = digitalRead(rearTorpedoClk);
-
 
   if(digitalRead(debugPin)) {
     debug = true;
@@ -127,87 +119,107 @@ void setup() {
 }
 
 void loop() {
-    TorpedoLauncher();
+  ReadEncoderChange(1);     // FrontTorpedo
+  TorpedoLauncher(1);       // FrontTorpedo
+  
+  ReadEncoderChange(2);     // RearTorpedo
+  TorpedoLauncher(2);       // RearTorpedo
 }
 
 //--------------------------------------------------------------------------
 
-void TorpedoLauncher() {
-  static byte blinkFrontTAmount = 0;
-  static byte blinkRearTAmount = 0;
+void TorpedoLauncher(byte torpedoRamp) {
+  static byte blinkAmount = 0;
+  byte torpedoSw;
+  int torpedoAmount;
+  byte type;
   
-  if(!PCF_IN.digitalRead(frontTorpedoSw)) {
-    if(debug) {
-      Serial.println("front torpedolauncher activated!");
-    }
-    blinkFrontTAmount = frontTorpedoAmount;
+  switch(torpedoRamp) {
+    case 1:
+      torpedoSw = PCF_IN.digitalRead(frontTorpedoSw);
+      torpedoAmount = frontTorpedoAmount;
+      type = FRONTTORPEDO;
+      break;
+      
+    case 2:
+      torpedoSw = PCF_IN.digitalRead(rearTorpedoSw);
+      torpedoAmount = rearTorpedoAmount;
+      type = REARTORPEDO;
+      break;
   }
-  
-  if(!PCF_IN.digitalRead(rearTorpedoSw)) {
-    if(debug) {
-      Serial.println("rear torpedolauncher activated!");
-    }
-    blinkRearTAmount = rearTorpedoAmount;
-  }
-  
-  if(debug) {
-    Serial.print("front torpedos: ");
-    Serial.println(blinkFrontTAmount);
     
-    Serial.print("rear torpedos: ");
-    Serial.println(blinkRearTAmount);
+  if(!torpedoSw) {
+    if(debug) {
+      Serial.println("torpedo launcher activated!");
+    }
+    blinkAmount = torpedoAmount;
+  }
+    
+  if(debug) {
+    Serial.print("Torpedo Launcher: ");
+    Serial.println(type);
+    Serial.print("amount of torpedos: ");
+    Serial.println(blinkAmount);
   }
 
-  flashingGroup[FRONTTORPEDO].run(blinkFrontTAmount);
-  flashingGroup[REARTORPEDO].run(blinkRearTAmount);
+  flashingGroup[type].run(blinkAmount);
 }
 
 //--------------------------------------------------------------------------
 
-void ReadEncoderChange() {
-  frontTorpedoCurrentClkState = PCF_IN.digitalRead(frontTorpedoClk);
-  rearTorpedoCurrentClkState = PCF_IN.digitalRead(rearTorpedoClk);
+void ReadEncoderChange(byte torpedoRamp) {
+  int currentClkState;
+  int lastClkState;
+  int torpedoAmount                  = 0;
+  int encMaxCount                    = 9;
+  int encMinCount                    = 0;
+  byte torpedoDt;
   
-  if(frontTorpedoCurrentClkState != frontTorpedoLastClkState && frontTorpedoCurrentClkState == 0) {
-    if(PCF_IN.digitalRead(frontTorpedoDt) != frontTorpedoCurrentClkState) {
-      frontTorpedoAmount ++ ;                         // Increase the Counter, but only until MaxCount has been reached
-      if(frontTorpedoAmount > encMaxCount) {
-        frontTorpedoAmount = encMaxCount;
+  switch(torpedoRamp) {
+    case 1:
+      currentClkState = PCF_IN.digitalRead(frontTorpedoClk);
+      lastClkState = frontTorpedoLastClkState;
+      torpedoDt = PCF_IN.digitalRead(frontTorpedoDt);
+      break;
+
+    case 2:
+      currentClkState = PCF_IN.digitalRead(rearTorpedoClk);
+      lastClkState = rearTorpedoLastClkState;
+      torpedoDt = PCF_IN.digitalRead(rearTorpedoDt);
+      break;
+  }
+
+  if(currentClkState != lastClkState && currentClkState == 0) {
+    if(torpedoDt != currentClkState) {
+      torpedoAmount ++ ;                         // Increase the Counter, but only until MaxCount has been reached
+      if(torpedoAmount > encMaxCount) {
+        torpedoAmount = encMaxCount;
       }
       if(debug) {
         Serial.println("increasing front torpedo amount");
       }
     }
     else {
-      frontTorpedoAmount -- ;                         // Decrease the Counter, but only until MinCount has been reached
-      if(frontTorpedoAmount < encMinCount) {
-        frontTorpedoAmount = encMinCount;
+      torpedoAmount -- ;                         // Decrease the Counter, but only until MinCount has been reached
+      if(torpedoAmount < encMinCount) {
+        torpedoAmount = encMinCount;
       }
       if(debug) {
         Serial.println("decreasing front torpedo amount");
       }
     }
   }
-  frontTorpedoLastClkState = frontTorpedoCurrentClkState;
+  lastClkState = currentClkState;
+  
+  switch(torpedoRamp) {
+    case 1:  
+      frontTorpedoAmount = torpedoAmount;
+      break;
 
-  if(rearTorpedoCurrentClkState != rearTorpedoLastClkState && rearTorpedoCurrentClkState == 0) {
-    if(PCF_IN.digitalRead(rearTorpedoDt) != rearTorpedoCurrentClkState) {
-      rearTorpedoAmount ++ ;
-      if(rearTorpedoAmount > encMaxCount) {
-        rearTorpedoAmount = encMaxCount;
-      }
-      if(debug) {
-        Serial.println("increasing rear torpedo amount");
-      }
-    }
-    else {
-      rearTorpedoAmount -- ;
-      if(rearTorpedoAmount < encMinCount) {
-        rearTorpedoAmount = encMinCount;
-      }
-      if(debug) {
-        Serial.println("decreasing rear torpedo amount");
-      }
-    }
+    case 2:
+      rearTorpedoAmount = rearTorpedoAmount;
+      break;
   }
 }
+
+//--------------------------------------------------------------------------
