@@ -5,7 +5,7 @@
  *   
  */
 
-#include <PCF8591.h>                          // Analog In-/Output extension
+//#include <PCF8591.h>                        // Analog In-/Output extension
 #include <PCF8574.h>                          // Digital In-/Output extension
 #include <IRremote.hpp>                       // IR remote
 
@@ -15,14 +15,12 @@ PCF8574 PCF_IN(0x25);                         // INPUTS
 bool debug;                                   // for DebugOption we want to shorten a specific PIN. default value is true
 const byte debugPin                = 2;
 
-bool useRearTorpedoLauncher        = true;    // will the rearTorpedoLauncher will be used?
-
-const byte frontTorpedoDt          = 4;       // change to PCF8574 Pin
-const byte frontTorpedoSw          = 2;       // change to PCF8574 Pin
-const byte frontTorpedoClk         = 7;       // change to PCF8574 Pin
-const byte rearTorpedoDt           = ;        // change to PCF8574 Pin
-const byte rearTorpedoSw           = ;        // change to PCF8574 Pin
-const byte rearTorpedoClk          = ;        // change to PCF8574 Pin
+const byte frontTorpedoDt          = 0;       // PCF_IN P01
+const byte frontTorpedoSw          = 1;       // PCF_IN P02
+const byte frontTorpedoClk         = 2;       // PCF_IN P03
+const byte rearTorpedoDt           = 3;       // PCF_IN P04
+const byte rearTorpedoSw           = 4;       // PCF_IN P05
+const byte rearTorpedoClk          = 5;       // PCF_IN P06
 
 int frontTorpedoAmount             = 0;
 int rearTorpedoAmount              = 0;
@@ -33,9 +31,14 @@ int rearTorpedoLastClkState;
 int frontTorpedoCurrentClkState;
 int rearTorpedoCurrentClkState;
 
+const unsigned long torpedoOnTime  = 120;
+const unsigned long torpedoOffTime = 450;
+
 int encMaxCount                    = 9;
 int encMinCount                    = 0;
 
+const byte frontTorpedoLed         = 0;       // PCF_OUT P01
+const byte rearTorpedoLed          = 1;       // PCF_OUT P02
 
 //--------------------------------------------------------------------------
 
@@ -52,24 +55,28 @@ class Flasher {
   public:
     Flasher(const byte ledPin, const unsigned long onPhase, const unsigned long offPhase): ledPin(ledPin), onPhase(onPhase), offPhase(offPhase) {}
   
+  //--------------------------------------------------------------------------
+  
   void run(byte & blinkAmount) {
     uint32_t now = millis();
 
     switch (step) {
       case _step::Start:
         if (blinkAmount) {
-          PCF_OUT.write(ledPin, HIGH);
+          PCF_OUT.digitalWrite(ledPin, HIGH);
           step = _step::OnPhase;
           timeMarker = now;
         }
         break;
+        
       case _step::OnPhase:
         if (now - timeMarker >= onPhase) {
-          PCF_OUT.write(ledPin, LOW);           
+          PCF_OUT.digitalWrite(ledPin, LOW);           
           step = _step::OffPhase;
           timeMarker = now;
         }
         break;
+        
       case _step::OffPhase:
         if (now - timeMarker >= offPhase) {
           if (blinkAmount > 0) {
@@ -83,13 +90,13 @@ class Flasher {
 
 //--------------------------------------------------------------------------
 
-enum FlashingGroup : byte {FRONTTORPEDO, REARTORPEDO, BEACON};
+enum FlashingGroup : byte {FRONTTORPEDO, REARTORPEDO, /*BEACON*/};
                                
 Flasher flashingGroup[] = 
 {                                          
-  {frontTorpedoLauncherLed, torpedoLaunchOnTime, torpedoLaunchOffTime},
-  {rearTorpedoLauncherLed, torpedoLaunchOnTime, torpedoLaunchOffTime},
-  {beaconLightsLed, beaconLightOnTime, beaconLightOffTime},
+  {frontTorpedoLed, torpedoOnTime, torpedoOffTime},
+  {rearTorpedoLed, torpedoOnTime, torpedoOffTime},
+  //{beaconLightsLed, beaconLightOnTime, beaconLightOffTime},
 };
 
 //--------------------------------------------------------------------------
@@ -100,15 +107,15 @@ void setup() {
   pinMode(frontTorpedoDt, INPUT);                      // Define Pin Mode for the DT connector (Front Torpedo)
   pinMode(frontTorpedoSw, INPUT_PULLUP);               // Define Pin Mode for the SW connector (Front Torpedo)
   pinMode(frontTorpedoClk, INPUT);                     // Define Pin Mode for the CLK cocnnector (Front Torpedo)
-  
+  frontTorpedoLastClkState = digitalRead(frontTorpedoClk);
+  frontTorpedoCurrentClkState = digitalRead(frontTorpedoClk);
+
   pinMode(rearTorpedoDt, INPUT);                       // Define Pin Mode for the DT connector (Rear Torpedo)
   pinMode(rearTorpedoSw, INPUT_PULLUP);                // Define Pin Mode for the SW connector (Rear Torpedo)
   pinMode(rearTorpedoClk, INPUT);                      // Define Pin Mode for the CLK cocnnector (Rear Torpedo)
-  
-  frontTorpedoLastClkState = digitalRead(frontTorpedoClk);
-  frontTorpedoCurrentClkState = digitalRead(frontTorpedoClk);
   rearTorpedoLastClkState = digitalRead(rearTorpedoClk);
   rearTorpedoCurrentClkState = digitalRead(rearTorpedoClk);
+
 
   if(digitalRead(debugPin)) {
     debug = true;
@@ -116,63 +123,91 @@ void setup() {
   }
   else {
     debug = false;
-    wifiManager.setDebugOutput(false);
   }
 }
 
 void loop() {
-    TorpedoLauncher(1);
+    TorpedoLauncher();
 }
 
 //--------------------------------------------------------------------------
 
-void TorpedoLauncher(byte caller) {
-  static byte blinkFrontAmount = 0;
+void TorpedoLauncher() {
+  static byte blinkFrontTAmount = 0;
+  static byte blinkRearTAmount = 0;
+  
+  if(!PCF_IN.digitalRead(frontTorpedoSw)) {
+    if(debug) {
+      Serial.println("front torpedolauncher activated!");
+    }
+    blinkFrontTAmount = frontTorpedoAmount;
+  }
+  
+  if(!PCF_IN.digitalRead(rearTorpedoSw)) {
+    if(debug) {
+      Serial.println("rear torpedolauncher activated!");
+    }
+    blinkRearTAmount = rearTorpedoAmount;
+  }
+  
   if(debug) {
-    Serial.print("Amount Front Torpedo-Launches: ");
-    Serial.println(blinkFrontAmount);
+    Serial.print("front torpedos: ");
+    Serial.println(blinkFrontTAmount);
+    
+    Serial.print("rear torpedos: ");
+    Serial.println(blinkRearTAmount);
   }
 
-  switch(caller) {
-    case 1:  
+  flashingGroup[FRONTTORPEDO].run(blinkFrontTAmount);
+  flashingGroup[REARTORPEDO].run(blinkRearTAmount);
+}
+
+//--------------------------------------------------------------------------
+
+void ReadEncoderChange() {
+  frontTorpedoCurrentClkState = PCF_IN.digitalRead(frontTorpedoClk);
+  rearTorpedoCurrentClkState = PCF_IN.digitalRead(rearTorpedoClk);
+  
+  if(frontTorpedoCurrentClkState != frontTorpedoLastClkState && frontTorpedoCurrentClkState == 0) {
+    if(PCF_IN.digitalRead(frontTorpedoDt) != frontTorpedoCurrentClkState) {
+      frontTorpedoAmount ++ ;                         // Increase the Counter, but only until MaxCount has been reached
+      if(frontTorpedoAmount > encMaxCount) {
+        frontTorpedoAmount = encMaxCount;
+      }
       if(debug) {
-        Serial.print("Function-Caller: ");
-        Serial.print(caller);
-        Serial.println(" (loop)");
+        Serial.println("increasing front torpedo amount");
       }
-      
-      // change this code according to new PCF Library... !
-      /*
-      if (PCF_IN.read(frontTorpedoLaunchBtn))
-      {
-        if(debug) {
-          Serial.println("front torpedolauncher activated!");
-        }
-        blinkFrontAmount = amountFrontTorpedoLaunches;
+    }
+    else {
+      frontTorpedoAmount -- ;                         // Decrease the Counter, but only until MinCount has been reached
+      if(frontTorpedoAmount < encMinCount) {
+        frontTorpedoAmount = encMinCount;
       }
-      */
-      
-      flashingGroup[FRONTTORPEDO].run(blinkFrontAmount);
-      break;
-      
-      case 2:
-        if(debug) {
-          Serial.print("Function-Caller: ");
-          Serial.print(caller);
-          Serial.println(" (WebUi)");
-        }
-      
-        // Add Code for WebInterface
-        // Example:
-        /*
-        if (header.indexOf("GET /5/on") >= 0) {
-          Serial.println("GPIO 5 on");
-          output5State = "on";
-          blinkFrontAmount = amountFrontTorpedoLaunches;
-          //digitalWrite(output5, HIGH);
-        } 
-        */
-        blinkFrontAmount = amountFrontTorpedoLaunches;
-        break;
+      if(debug) {
+        Serial.println("decreasing front torpedo amount");
+      }
+    }
+  }
+  frontTorpedoLastClkState = frontTorpedoCurrentClkState;
+
+  if(rearTorpedoCurrentClkState != rearTorpedoLastClkState && rearTorpedoCurrentClkState == 0) {
+    if(PCF_IN.digitalRead(rearTorpedoDt) != rearTorpedoCurrentClkState) {
+      rearTorpedoAmount ++ ;
+      if(rearTorpedoAmount > encMaxCount) {
+        rearTorpedoAmount = encMaxCount;
+      }
+      if(debug) {
+        Serial.println("increasing rear torpedo amount");
+      }
+    }
+    else {
+      rearTorpedoAmount -- ;
+      if(rearTorpedoAmount < encMinCount) {
+        rearTorpedoAmount = encMinCount;
+      }
+      if(debug) {
+        Serial.println("decreasing rear torpedo amount");
+      }
+    }
   }
 }
